@@ -1,0 +1,17 @@
+services:
+  zqr-app:
+    build: .
+    image: zqr-app:latest
+    container_name: zqr-app
+    restart: unless-stopped
+    ports:
+      - "8122:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    networks:
+      - homelab-net
+
+networks:
+  homelab-net:
+    external: true
