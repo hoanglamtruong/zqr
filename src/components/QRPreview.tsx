@@ -190,17 +190,16 @@ export default function QRPreview({
 
       {/* VÙNG CHỨA MÃ QR */}
       <div
-        className="p-5 rounded-2xl border-2 border-slate-100 shadow-md flex items-center justify-center transition-all bg-white relative group"
+        className="p-5 rounded-2xl border-2 border-slate-100 shadow-md flex items-center justify-center transition-all bg-white relative group min-w-[320px] min-h-[320px]"
         style={{ backgroundColor: styleOptions.bgColor || "#ffffff" }}
       >
-        <div ref={qrRef} className="flex items-center justify-center min-w-[280px] min-h-[280px]">
-          {!isReady && (
-            <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
-              <RefreshCw className="w-6 h-6 animate-spin text-[#1B6B7B]" />
-              <span className="text-xs">Đang sinh mã QR...</span>
-            </div>
-          )}
-        </div>
+        <div ref={qrRef} className="flex items-center justify-center" />
+        {!isReady && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-2xl">
+            <RefreshCw className="w-6 h-6 animate-spin text-[#1B6B7B]" />
+            <span className="text-xs">Đang sinh mã QR...</span>
+          </div>
+        )}
       </div>
 
       {/* THÔNG TIN NỘI DUNG MÃ */}

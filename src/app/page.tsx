@@ -1,12 +1,21 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import FormTabs from "@/components/FormTabs";
 import StyleCustomizer from "@/components/StyleCustomizer";
-import QRPreview from "@/components/QRPreview";
 import { QRType, VietQRData, WifiData, VCardData, EmailData, PhoneData, QRStyleOptions } from "@/types/qr";
 import { formatQRContent } from "@/lib/qr-formatter";
 import { QrCode, Sparkles, ShieldCheck, Network } from "lucide-react";
+
+const QRPreview = dynamic(() => import("@/components/QRPreview"), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center min-h-[420px] sticky top-6">
+      <div className="text-slate-400 text-sm animate-pulse">Đang tải trình xem mã QR...</div>
+    </div>
+  ),
+});
 
 export default function Home() {
   const [activeType, setActiveType] = useState<QRType>("url");
