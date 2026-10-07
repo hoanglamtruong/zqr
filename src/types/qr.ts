@@ -1,4 +1,14 @@
-export type QRType = 'url' | 'vietqr' | 'wifi' | 'text' | 'vcard' | 'email' | 'phone';
+export type QRType = 'url' | 'vietqr' | 'wifi' | 'text' | 'vcard' | 'email' | 'phone' | 'dynamic';
+
+export interface DynamicQRRecord {
+  code: string;
+  title: string;
+  targetUrl: string;
+  scanCount: number;
+  lastScannedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface VietQRData {
   bankBin: string;

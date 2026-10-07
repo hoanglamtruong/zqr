@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { VIETNAMESE_BANKS } from "@/lib/vietqr";
 import { VietQRData, WifiData, VCardData, EmailData, PhoneData, QRType } from "@/types/qr";
-import { Link2, CreditCard, Wifi, UserSquare2, FileText, Mail, Phone, Search } from "lucide-react";
+import { Link2, CreditCard, Wifi, UserSquare2, FileText, Mail, Phone, Search, Zap } from "lucide-react";
+import DynamicQRManager from "./DynamicQRManager";
 
 interface FormTabsProps {
   activeType: QRType;
@@ -22,6 +23,7 @@ interface FormTabsProps {
   onChangeEmail: (data: EmailData) => void;
   phone: PhoneData;
   onChangePhone: (data: PhoneData) => void;
+  onActiveDynamicUrlChange: (url: string) => void;
 }
 
 export default function FormTabs({
@@ -41,6 +43,7 @@ export default function FormTabs({
   onChangeEmail,
   phone,
   onChangePhone,
+  onActiveDynamicUrlChange,
 }: FormTabsProps) {
   const [bankSearch, setBankSearch] = useState("");
   const [isBankOpen, setIsBankOpen] = useState(false);
@@ -55,6 +58,7 @@ export default function FormTabs({
   const selectedBank = VIETNAMESE_BANKS.find((b) => b.bin === vietqr.bankBin) || VIETNAMESE_BANKS[0];
 
   const tabs: { id: QRType; label: string; icon: React.ReactNode }[] = [
+    { id: "dynamic", label: "QR Động", icon: <Zap className="w-4 h-4 text-[#E8622A]" /> },
     { id: "url", label: "Trang Web (URL)", icon: <Link2 className="w-4 h-4" /> },
     { id: "vietqr", label: "VietQR Ngân Hàng", icon: <CreditCard className="w-4 h-4 text-emerald-600" /> },
     { id: "wifi", label: "Mạng Wi-Fi", icon: <Wifi className="w-4 h-4" /> },
@@ -89,6 +93,10 @@ export default function FormTabs({
 
       {/* Tab Content */}
       <div className="p-6">
+        {activeType === "dynamic" && (
+          <DynamicQRManager onActiveUrlChange={onActiveDynamicUrlChange} />
+        )}
+
         {activeType === "url" && (
           <div className="space-y-4">
             <div>

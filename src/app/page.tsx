@@ -4,9 +4,11 @@ import React, { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import FormTabs from "@/components/FormTabs";
 import StyleCustomizer from "@/components/StyleCustomizer";
+import SavedQRModal from "@/components/SavedQRModal";
 import { QRType, VietQRData, WifiData, VCardData, EmailData, PhoneData, QRStyleOptions } from "@/types/qr";
 import { formatQRContent } from "@/lib/qr-formatter";
-import { QrCode, Sparkles, ShieldCheck, Network } from "lucide-react";
+import { saveQRCodeToCloud, SavedQRItem } from "@/lib/supabase";
+import { QrCode, Cloud, Network, Check, Sparkles, Radio } from "lucide-react";
 
 const QRPreview = dynamic(() => import("@/components/QRPreview"), {
   ssr: false,
@@ -52,6 +54,15 @@ export default function Home() {
     phone: "0912345678",
   });
 
+  // Supabase & Dynamic QR States
+  const [qrTitle, setQrTitle] = useState("Mã QR Chiến Dịch");
+  const [isDynamic, setIsDynamic] = useState(false);
+  const [dynamicRedirectCode, setDynamicRedirectCode] = useState<string | null>(null);
+  const [dynamicUrl, setDynamicUrl] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+
   const [styleOptions, setStyleOptions] = useState<QRStyleOptions>({
     dotType: "rounded",
     cornerSquareType: "extra-rounded",
@@ -68,7 +79,7 @@ export default function Home() {
     errorCorrectionLevel: "M",
   });
 
-  const qrContent = useMemo(() => {
+  const staticContent = useMemo(() => {
     return formatQRContent(
       activeType,
       url,
@@ -81,13 +92,92 @@ export default function Home() {
     );
   }, [activeType, url, text, vietqr, wifi, vcard, email, phone]);
 
+  // Nếu là mã động và đã sinh code, nội dung QR là URL chuyển hướng
+  const finalContent = useMemo(() => {
+    if (activeType === "dynamic") {
+      return dynamicUrl || "https://zeebee.vn";
+    }
+    if (isDynamic && dynamicRedirectCode) {
+      if (typeof window !== "undefined") {
+        return `${window.location.origin}/r/${dynamicRedirectCode}`;
+      }
+      return `/r/${dynamicRedirectCode}`;
+    }
+    return staticContent;
+  }, [activeType, dynamicUrl, isDynamic, dynamicRedirectCode, staticContent]);
+
+  const handleSaveToCloud = async () => {
+    setIsSaving(true);
+    setSaveSuccessMsg(null);
+
+    const destUrl = activeType === "url" ? url : staticContent;
+
+    const res = await saveQRCodeToCloud({
+      title: qrTitle,
+      type: activeType,
+      is_dynamic: isDynamic,
+      destination_url: destUrl,
+      qr_data: {
+        activeType,
+        url,
+        text,
+        vietqr,
+        wifi,
+        vcard,
+        email,
+        phone,
+        styleOptions,
+      },
+    });
+
+    setIsSaving(false);
+
+    if (res.error) {
+      alert("Lỗi lưu trữ Supabase: " + res.error + "\n\n(Hãy bấm 'Kho mã & Thống kê' -> 'Cấu hình API' để nhập Supabase URL và Anon Key nếu chưa cấu hình)");
+      return;
+    }
+
+    if (res.data) {
+      if (isDynamic) {
+        setDynamicRedirectCode(res.data.short_code);
+        setSaveSuccessMsg(`Đã tạo mã Động! Mã rút gọn: ${res.data.short_code}`);
+      } else {
+        setSaveSuccessMsg("Đã lưu mã QR lên Supabase thành công!");
+      }
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
+    }
+  };
+
+  const handleLoadSavedQR = (item: SavedQRItem) => {
+    setQrTitle(item.title);
+    setIsDynamic(item.is_dynamic);
+    if (item.is_dynamic) {
+      setDynamicRedirectCode(item.short_code);
+    } else {
+      setDynamicRedirectCode(null);
+    }
+
+    const data = item.qr_data;
+    if (data) {
+      if (data.activeType) setActiveType(data.activeType);
+      if (data.url) setUrl(data.url);
+      if (data.text) setText(data.text);
+      if (data.vietqr) setVietqr(data.vietqr);
+      if (data.wifi) setWifi(data.wifi);
+      if (data.vcard) setVcard(data.vcard);
+      if (data.email) setEmail(data.email);
+      if (data.phone) setPhone(data.phone);
+      if (data.styleOptions) setStyleOptions(data.styleOptions);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-between">
       {/* HEADER */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#1B6B7B] to-[#E8622A] flex items-center justify-center text-white shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1B6B7B] to-[#E8622A] flex items-center justify-center text-white shadow-sm">
               <QrCode className="w-6 h-6" />
             </div>
             <div>
@@ -96,20 +186,25 @@ export default function Home() {
                   z<span className="text-[#1B6B7B]">QR</span>
                 </span>
                 <span className="bg-teal-50 text-[#1B6B7B] text-[10px] font-bold px-2 py-0.5 rounded-full border border-teal-200">
-                  v1.0 Pro
+                  Cloud Pro
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
-                Bộ công cụ tạo mã QR đa năng & tùy biến cao cấp cho ZOS
+                Bộ công cụ tạo mã QR đa năng, VietQR & Dynamic Analytics (Supabase + Vercel)
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-xs text-slate-700 font-mono">
-              <Network className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Tailscale: 100.82.135.18:8122</span>
-            </div>
+          <div className="flex items-center gap-2.5">
+            {/* Nút Kho mã Supabase */}
+            <button
+              onClick={() => setIsSavedModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#1B6B7B] border border-teal-200 text-xs font-bold transition-all shadow-2xs"
+            >
+              <Cloud className="w-4 h-4" />
+              <span>Kho Mã & Thống Kê</span>
+            </button>
+
             <a
               href="https://github.com/hoanglamtruong/zqr"
               target="_blank"
@@ -132,11 +227,70 @@ export default function Home() {
           <div className="lg:col-span-7 space-y-6">
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                Trình Tạo Mã QR Tĩnh & VietQR
+                Trình Tạo Mã QR Tĩnh, VietQR & QR Động
               </h1>
               <p className="text-sm text-slate-600 mt-1">
-                Tùy biến hạt, màu gradient, chèn logo doanh nghiệp và xuất file SVG in ấn siêu nét.
+                Tùy biến hạt, màu gradient, chèn logo thương hiệu và lưu trữ đám mây Supabase để theo dõi lượt quét.
               </p>
+            </div>
+
+            {/* BẢNG CẤU HÌNH CLOUD & DYNAMIC QR */}
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">
+                    Tên gợi nhớ của mã QR
+                  </label>
+                  <input
+                    type="text"
+                    value={qrTitle}
+                    onChange={(e) => setQrTitle(e.target.value)}
+                    placeholder="Ví dụ: Menu Quán Cà Phê, Standee Khuyến Mãi..."
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#1B6B7B]"
+                  />
+                </div>
+
+                <div className="pt-2 sm:pt-5 flex items-center gap-2">
+                  <button
+                    onClick={handleSaveToCloud}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#1B6B7B] hover:bg-[#145360] text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50"
+                  >
+                    <Cloud className="w-4 h-4" />
+                    <span>{isSaving ? "Đang lưu..." : "Lưu Lên Supabase"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Tùy chọn Mã QR Động */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isDynamic}
+                    onChange={(e) => {
+                      setIsDynamic(e.target.checked);
+                      if (!e.target.checked) setDynamicRedirectCode(null);
+                    }}
+                    className="w-4 h-4 text-[#1B6B7B] rounded focus:ring-[#1B6B7B]"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <Radio className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                      Kích hoạt Mã QR Động (Dynamic QR)
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      Cho phép sửa đổi link đích sau khi in ấn & tự động đếm lượt quét.
+                    </span>
+                  </div>
+                </label>
+
+                {saveSuccessMsg && (
+                  <span className="text-xs text-emerald-600 font-bold flex items-center gap-1 animate-in fade-in">
+                    <Check className="w-3.5 h-3.5" /> {saveSuccessMsg}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* BỘ FORM NHẬP DỮ LIỆU */}
@@ -157,6 +311,7 @@ export default function Home() {
               onChangeEmail={setEmail}
               phone={phone}
               onChangePhone={setPhone}
+              onActiveDynamicUrlChange={setDynamicUrl}
             />
 
             {/* BỘ TÙY BIẾN THẨM MỸ */}
@@ -169,10 +324,10 @@ export default function Home() {
           {/* CỘT PHẢI: XEM TRƯỚC & TẢI VỀ (5 CỘT) */}
           <div className="lg:col-span-5">
             <QRPreview
-              content={qrContent}
+              content={finalContent}
               styleOptions={styleOptions}
               title="Mã QR Của Bạn"
-              subtitle="Quét trực tiếp bằng camera hoặc app ngân hàng"
+              subtitle={isDynamic ? "Mã QR Động - Theo dõi lượt quét" : "Mã QR Tĩnh"}
             />
           </div>
         </div>
@@ -184,15 +339,22 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-800">zQR Generator</span>
             <span>•</span>
-            <span>Hệ sinh thái ZOS · Dell OptiPlex 9010</span>
+            <span>Hệ sinh thái ZOS · Supabase Cloud · Vercel Global Edge</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
-            <span>Client-side Secure (100% bảo mật dữ liệu)</span>
+            <span>Client-side Secure & Cloud Analytics</span>
             <span>•</span>
             <span>Chuẩn Napas247 EMVCo</span>
           </div>
         </div>
       </footer>
+
+      {/* MODAL KHO MÃ QR & THỐNG KÊ */}
+      <SavedQRModal
+        isOpen={isSavedModalOpen}
+        onClose={() => setIsSavedModalOpen(false)}
+        onSelectQR={handleLoadSavedQR}
+      />
     </div>
   );
 }

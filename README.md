@@ -5,6 +5,7 @@
 ## 🚀 Tính năng nổi bật
 
 - **Đa dạng định dạng dữ liệu:**
+  - ⚡ **QR Động:** Mã QR mã hoá 1 liên kết chuyển hướng cố định (`/r/<mã>`) — đổi đích đến bất cứ lúc nào mà không cần in lại mã, kèm thống kê số lượt quét & thời gian quét gần nhất. Dữ liệu lưu trong SQLite (`node:sqlite`, file `/app/data/zqr.db`, persist qua Docker volume `zqr-data`).
   - 🌐 **Website (URL):** Tạo mã truy cập trang web, link mạng xã hội, tài liệu.
   - 💳 **VietQR (Napas 247):** Hỗ trợ đầy đủ danh sách các ngân hàng tại Việt Nam (VCB, MB, TCB, VPB, ACB, BIDV...). Tự động mã hoá chuỗi EMVCo Napas chuẩn xác 100% offline (tự tính CRC16-CCITT).
   - 📶 **Mạng Wi-Fi:** Quét để tự động kết nối Wi-Fi (chuẩn WPA/WPA2/WPA3, WEP hoặc mạng mở; hỗ trợ SSID ẩn).
@@ -29,8 +30,9 @@
 - **Ngôn ngữ:** TypeScript
 - **Styling:** Tailwind CSS v4
 - **Thư viện mã QR:** `qr-code-styling`
+- **Lưu trữ QR động:** `node:sqlite` (built-in Node.js 22, không cần biên dịch native)
 - **Bộ icon:** Lucide React
-- **Đóng gói:** Docker multi-stage build, mạng `homelab-net`
+- **Đóng gói:** Docker multi-stage build, mạng `homelab-net`, volume `zqr-data`
 
 ## 📦 Chạy dự án
 

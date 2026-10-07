@@ -9,9 +9,15 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - ZQR_DB_PATH=/app/data/zqr.db
+    volumes:
+      - zqr-data:/app/data
     networks:
       - homelab-net
 
 networks:
   homelab-net:
     external: true
+
+volumes:
+  zqr-data:
